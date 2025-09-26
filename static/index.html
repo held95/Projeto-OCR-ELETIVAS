@@ -2,37 +2,40 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>LlamaCloud OCR via Flask (Vercel)</title>
+  <title>Teste OCR LlamaCloud</title>
 </head>
 <body>
-  <h2>Enviar várias fotos para LlamaCloud</h2>
+  <h2>Teste Upload para Flask na Vercel</h2>
 
-  <input type="file" id="upload" multiple accept="image/*">
-  <button onclick="processarFotos()">Enviar</button>
+  <input type="file" id="upload" accept="image/*">
+  <button onclick="processarFoto()">Enviar</button>
 
-  <div id="resultados"></div>
+  <div id="resultado"></div>
 
   <script>
-    async function processarFotos() {
-      const files = document.getElementById('upload').files;
-      const resultadosDiv = document.getElementById('resultados');
-      resultadosDiv.innerHTML = "<p>Processando...</p>";
+    async function processarFoto() {
+      const fileInput = document.getElementById('upload');
+      if (fileInput.files.length === 0) {
+        alert("Selecione uma imagem primeiro!");
+        return;
+      }
 
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
 
-        try {
-          const response = await fetch("/processar", {
-            method: "POST",
-            body: formData
-          });
+      try {
+        const response = await fetch("/processar", {
+          method: "POST",
+          body: formData
+        });
 
-          const data = await response.json();
-          resultadosDiv.innerHTML += `<pre>${JSON.stringify(data.data, null, 2)}</pre>`;
-        } catch (err) {
-          resultadosDiv.innerHTML += `<p>Erro ao processar ${file.name}: ${err.message}</p>`;
-        }
+        const data = await response.json();
+        document.getElementById("resultado").innerHTML =
+          `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      } catch (err) {
+        document.getElementById("resultado").innerHTML =
+          `<p>Erro: ${err.message}</p>`;
       }
     }
   </script>
