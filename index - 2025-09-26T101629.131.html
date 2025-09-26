@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>LlamaCloud OCR via Flask (Vercel)</title>
+</head>
+<body>
+  <h2>Enviar várias fotos para LlamaCloud</h2>
+
+  <input type="file" id="upload" multiple accept="image/*">
+  <button onclick="processarFotos()">Enviar</button>
+
+  <div id="resultados"></div>
+
+  <script>
+    async function processarFotos() {
+      const files = document.getElementById('upload').files;
+      const resultadosDiv = document.getElementById('resultados');
+      resultadosDiv.innerHTML = "<p>Processando...</p>";
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch("/processar", {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await response.json();
+          resultadosDiv.innerHTML += `<pre>${JSON.stringify(data.data, null, 2)}</pre>`;
+        } catch (err) {
+          resultadosDiv.innerHTML += `<p>Erro ao processar ${file.name}: ${err.message}</p>`;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
