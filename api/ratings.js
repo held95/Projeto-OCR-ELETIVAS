@@ -1,25 +1,34 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
+// ⛔ IMPORTANTÍSSIMO: nunca coloque a URL diretamente no process.env
+// Configure no painel da Vercel: Settings → Environment Variables
 const supabase = createClient(
-  process.env.https://jalecmkihfjfyxewkszk.supabase.co/,
-  process.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbGVjbWtpaGZqZnl4ZXdrc3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMDQ2NDIsImV4cCI6MjA4MDc4MDY0Mn0.MoMKy0D_5kSM86mChgqreOxbPTEd5ZvQoGgbpV3FoGo
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
 );
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
-    const { data, error } = await supabase.from("ratings").select("*");
-    if (error) return res.status(500).json(error);
+    const { data, error } = await supabase
+      .from("ratings")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) return res.status(500).json({ error });
     return res.status(200).json(data);
   }
 
   if (req.method === "POST") {
-    const { name, rating, comment } = req.body;
+    const payload = req.body;
 
     const { data, error } = await supabase
       .from("ratings")
-      .insert([{ name, rating, comment }]);
+      .insert([payload])
+      .select();
 
-    if (error) return res.status(500).json(error);
+    if (error) return res.status(500).json({ error });
     return res.status(201).json(data[0]);
   }
+
+  return res.status(405).json({ error: "Método não permitido" });
 }
