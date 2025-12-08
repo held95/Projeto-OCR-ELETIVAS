@@ -1,11 +1,10 @@
 // Armazenamento em memória (apenas para DEMO)
-// IMPORTANTE: isso zera se a função "reiniciar"
 let ratings = [];
 
 // Função Serverless da Vercel
 export default function handler(req, res) {
-  // CORS básico (para o front conseguir chamar)
-  res.setHeader("Access-Control-Allow-Origin", "*"); // se quiser, troque pelo domínio específico do front
+  // CORS básico
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -13,35 +12,37 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
+  // RECEBE UMA AVALIAÇÃO
   if (req.method === "POST") {
     try {
-      const { nota, comentario } = req.body || {};
+      const dados = req.body;
 
-      if (typeof nota !== "number" || !comentario) {
-        return res.status(400).json({
-          error: "Campos 'nota' (number) e 'comentario' são obrigatórios.",
-        });
+      // Validação simples: ao menos 1 campo
+      if (!dados || typeof dados !== "object" || Object.keys(dados).length === 0) {
+        return res.status(400).json({ error: "Payload inválido." });
       }
 
+      // Cria registro completo com ID + data
       const novoRegistro = {
         id: ratings.length + 1,
-        nota,
-        comentario,
+        ...dados,
         data: new Date().toISOString(),
       };
 
       ratings.push(novoRegistro);
 
       return res.status(201).json({
-        message: "Avaliação salva com sucesso.",
+        message: "Avaliação registrada com sucesso!",
         data: novoRegistro,
       });
+
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Erro ao salvar avaliação." });
     }
   }
 
+  // LISTA TODAS AS AVALIAÇÕES
   if (req.method === "GET") {
     return res.status(200).json(ratings);
   }
