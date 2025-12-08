@@ -1,54 +1,114 @@
-// api/ratings.js  (Vercel Serverless Function - Node.js / CommonJS)
+// api/ratings.js  (CommonJS – compatível com Vercel Node)
 
-const { createClient } = require("@supabase/supabase-js");
+const { createClient } = require('@supabase/supabase-js');
 
-// Pega as variáveis de ambiente da Vercel
+// Lê as variáveis de ambiente definidas no Vercel
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-// Verificação básica (ajuda a debugar se esquecer alguma env)
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("❌ SUPABASE_URL ou SUPABASE_ANON_KEY não configuradas.");
+  console.warn('⚠️ SUPABASE_URL ou SUPABASE_ANON_KEY não configurados.');
 }
 
-// Cria o client do Supabase
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Export padrão em CommonJS
+// Função serverless
 module.exports = async (req, res) => {
-  try {
-    if (req.method === "GET") {
-      const { data, error } = await supabase.from("ratings").select("*");
+  // CORS básico para permitir chamadas do seu frontend
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // GET -> lista avaliações
+  if (req.method === 'GET') {
+    try {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (error) {
-        console.error("Erro Supabase GET:", error);
-        return res.status(500).json({ error: "Erro ao buscar avaliações" });
+        console.error('Supabase GET error:', error);
+        return res.status(500).json({ error: 'Erro ao buscar avaliações' });
       }
 
       return res.status(200).json(data || []);
+    } catch (e) {
+      console.error('GET handler error:', e);
+      return res.status(500).json({ error: 'Erro interno no servidor' });
     }
+  }
 
-    if (req.method === "POST") {
-      const payload = req.body;
+  // POST -> salva avaliação enviada pelo formulário
+  if (req.method === 'POST') {
+    try {
+      const {
+        facilidade,
+        utilidade,
+        velocidade,
+        clareza,
+        ajuda,
+        melhorar,
+        momentos,
+        mudanca,
+        beneficio,
+        experiencia
+      } = req.body || {};
 
-      // Log de segurança (sem dados sensíveis) para debug
-      console.log("📥 Novo rating recebido:", Object.keys(payload));
-
-      const { data, error } = await supabase.from("ratings").insert([payload]);
-
-      if (error) {
-        console.error("Erro Supabase POST:", error);
-        return res.status(500).json({ error: "Erro ao salvar avaliação" });
+      // validação simples
+      if (
+        facilidade == null ||
+        utilidade == null ||
+        velocidade == null ||
+        clareza == null ||
+        !ajuda ||
+        !melhorar ||
+        !momentos ||
+        !mudanca ||
+        !beneficio ||
+        !experiencia
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'Campos obrigatórios ausentes no body' });
       }
 
-      return res.status(201).json(data[0]);
-    }
+      const { data, error } = await supabase
+        .from('ratings')
+        .insert([
+          {
+            facilidade,
+            utilidade,
+            velocidade,
+            clareza,
+            ajuda,
+            melhorar,
+            momentos,
+            mudanca,
+            beneficio,
+            experiencia
+          }
+        ])
+        .select()
+        .single();
 
-    // Outros métodos não permitidos
-    res.setHeader("Allow", ["GET", "POST"]);
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (err) {
-    console.error("❌ Erro inesperado na função /api/ratings:", err);
-    return res.status(500).json({ error: "Internal server error" });
+      if (error) {
+        console.error('Supabase POST error:', error);
+        return res.status(500).json({ error: 'Erro ao salvar avaliação' });
+      }
+
+      return res.status(201).json(data);
+    } catch (e) {
+      console.error('POST handler error:', e);
+      return res.status(500).json({ error: 'Erro interno no servidor' });
+    }
   }
+
+  // Método não suportado
+  return res.status(405).json({ error: 'Method not allowed' });
 };
