@@ -1,13 +1,11 @@
-// Armazenamento em memória (para demo)
+// Armazenamento em memória (apenas para DEMO)
+// IMPORTANTE: isso zera se a função "reiniciar"
 let ratings = [];
 
-/**
- * Função serverless da Vercel
- * Caminho: /api/ratings
- */
-module.exports = (req, res) => {
-  // CORS básico para permitir chamadas do front
-  res.setHeader("Access-Control-Allow-Origin", "*"); // se quiser, troque por seu domínio específico
+// Função Serverless da Vercel
+export default function handler(req, res) {
+  // CORS básico (para o front conseguir chamar)
+  res.setHeader("Access-Control-Allow-Origin", "*"); // se quiser, troque pelo domínio específico do front
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -20,9 +18,9 @@ module.exports = (req, res) => {
       const { nota, comentario } = req.body || {};
 
       if (typeof nota !== "number" || !comentario) {
-        return res
-          .status(400)
-          .json({ error: "Campos 'nota' (number) e 'comentario' são obrigatórios." });
+        return res.status(400).json({
+          error: "Campos 'nota' (number) e 'comentario' são obrigatórios.",
+        });
       }
 
       const novoRegistro = {
@@ -38,13 +36,15 @@ module.exports = (req, res) => {
         message: "Avaliação salva com sucesso.",
         data: novoRegistro,
       });
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       return res.status(500).json({ error: "Erro ao salvar avaliação." });
     }
-  } else if (req.method === "GET") {
+  }
+
+  if (req.method === "GET") {
     return res.status(200).json(ratings);
   }
 
   return res.status(405).json({ error: "Método não permitido." });
-};
+}
