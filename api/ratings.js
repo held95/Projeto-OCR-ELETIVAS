@@ -1,55 +1,4 @@
-// Armazenamento em memória (apenas para DEMO)
-let ratings = [];
-
-// Função Serverless da Vercel
-export default function handler(req, res) {
-  // CORS básico
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  // RECEBE UMA AVALIAÇÃO
-  if (req.method === "POST") {
-    try {
-      const dados = req.body;
-
-      // Validação simples: ao menos 1 campo
-      if (!dados || typeof dados !== "object" || Object.keys(dados).length === 0) {
-        return res.status(400).json({ error: "Payload inválido." });
-      }
-
-      // Cria registro completo com ID + data
-      const novoRegistro = {
-        id: ratings.length + 1,
-        ...dados,
-        data: new Date().toISOString(),
-      };
-
-      ratings.push(novoRegistro);
-
-      return res.status(201).json({
-        message: "Avaliação registrada com sucesso!",
-        data: novoRegistro,
-      });
-
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro ao salvar avaliação." });
-    }
-  }
-
-  // LISTA TODAS AS AVALIAÇÕES
-  if (req.method === "GET") {
-    return res.status(200).json(ratings);
-  }
-
-  return res.status(405).json({ error: "Método não permitido." });
-}
-
+// Ativa parsing de JSON no Vercel
 export const config = {
   api: {
     bodyParser: {
@@ -58,7 +7,7 @@ export const config = {
   },
 };
 
-// Armazenamento global (não zera entre execuções)
+// Armazenamento global — persiste entre execuções serverless
 if (!global.ratings) {
   global.ratings = [];
 }
@@ -73,42 +22,39 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  // GET - retorna tudo
+  // GET → retorna avaliações
   if (req.method === "GET") {
     return res.status(200).json(global.ratings);
   }
 
-  // POST - salva avaliação
+  // POST → salva nova avaliação
   if (req.method === "POST") {
     try {
       const dados = req.body;
 
       if (!dados || typeof dados !== "object") {
-        return res.status(400).json({ error: "JSON inválido" });
+        return res.status(400).json({ error: "JSON inválido." });
       }
 
-      const registro = {
+      const novoRegistro = {
         id: global.ratings.length + 1,
         ...dados,
         data: new Date().toISOString(),
       };
 
-      global.ratings.push(registro);
+      global.ratings.push(novoRegistro);
 
       return res.status(201).json({
-        message: "Avaliação registrada",
-        data: registro,
+        message: "Avaliação registrada com sucesso!",
+        data: novoRegistro,
       });
 
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Erro interno no servidor" });
+      console.error("ERRO:", err);
+      return res.status(500).json({ error: "Erro interno no servidor." });
     }
   }
 
-  return res.status(405).json({ error: "Método não permitido" });
+  // Qualquer outro método → 405
+  return res.status(405).json({ error: "Método não permitido." });
 }
-
-
-
-
