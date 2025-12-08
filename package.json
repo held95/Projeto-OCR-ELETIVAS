@@ -1,0 +1,7 @@
+{
+  "name": "protime-backend",
+  "version": "1.0.0",
+  "description": "Backend simples para avaliações Protime",
+  "main": "index.js",
+  "license": "MIT"
+}
