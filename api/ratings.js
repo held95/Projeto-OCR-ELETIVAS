@@ -49,3 +49,66 @@ export default function handler(req, res) {
 
   return res.status(405).json({ error: "Método não permitido." });
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "1mb",
+    },
+  },
+};
+
+// Armazenamento global (não zera entre execuções)
+if (!global.ratings) {
+  global.ratings = [];
+}
+
+export default function handler(req, res) {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // GET - retorna tudo
+  if (req.method === "GET") {
+    return res.status(200).json(global.ratings);
+  }
+
+  // POST - salva avaliação
+  if (req.method === "POST") {
+    try {
+      const dados = req.body;
+
+      if (!dados || typeof dados !== "object") {
+        return res.status(400).json({ error: "JSON inválido" });
+      }
+
+      const registro = {
+        id: global.ratings.length + 1,
+        ...dados,
+        data: new Date().toISOString(),
+      };
+
+      global.ratings.push(registro);
+
+      return res.status(201).json({
+        message: "Avaliação registrada",
+        data: registro,
+      });
+
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Erro interno no servidor" });
+    }
+  }
+
+  return res.status(405).json({ error: "Método não permitido" });
+}
+
+
+
+
