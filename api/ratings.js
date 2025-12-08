@@ -1,114 +1,97 @@
-// api/ratings.js  (CommonJS – compatível com Vercel Node)
+// api/ratings.js (Vercel serverless function – CommonJS)
 
-const { createClient } = require('@supabase/supabase-js');
+// 1) Importa o cliente Supabase (CommonJS)
+const { createClient } = require("@supabase/supabase-js");
 
-// Lê as variáveis de ambiente definidas no Vercel
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// 2) Lê as variáveis de ambiente
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️ SUPABASE_URL ou SUPABASE_ANON_KEY não configurados.');
+// 3) Validação básica (ajuda a achar erro nos logs do Vercel)
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error("❌ SUPABASE_URL ou SUPABASE_ANON_KEY não definidos nas variáveis de ambiente");
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 4) Cria o cliente Supabase
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Função serverless
+// 5) Domínio do frontend autorizado para CORS
+const FRONTEND_ORIGIN = "https://avaliacao-pro-time.vercel.app";
+
+// 6) Handler principal
 module.exports = async (req, res) => {
-  // CORS básico para permitir chamadas do seu frontend
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // --------- CORS ----------
+  res.setHeader("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // GET -> lista avaliações
-  if (req.method === 'GET') {
-    try {
+  try {
+    if (req.method === "GET") {
+      // Busca as avaliações mais recentes
       const { data, error } = await supabase
-        .from('ratings')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .from("ratings")
+        .select("*")
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) {
-        console.error('Supabase GET error:', error);
-        return res.status(500).json({ error: 'Erro ao buscar avaliações' });
+        console.error("❌ Supabase GET error:", error);
+        return res.status(500).json({ error: "Supabase GET error", details: error });
       }
 
       return res.status(200).json(data || []);
-    } catch (e) {
-      console.error('GET handler error:', e);
-      return res.status(500).json({ error: 'Erro interno no servidor' });
     }
-  }
 
-  // POST -> salva avaliação enviada pelo formulário
-  if (req.method === 'POST') {
-    try {
-      const {
-        facilidade,
-        utilidade,
-        velocidade,
-        clareza,
-        ajuda,
-        melhorar,
-        momentos,
-        mudanca,
-        beneficio,
-        experiencia
-      } = req.body || {};
+    if (req.method === "POST") {
+      const body = req.body || {};
 
-      // validação simples
-      if (
-        facilidade == null ||
-        utilidade == null ||
-        velocidade == null ||
-        clareza == null ||
-        !ajuda ||
-        !melhorar ||
-        !momentos ||
-        !mudanca ||
-        !beneficio ||
-        !experiencia
-      ) {
-        return res
-          .status(400)
-          .json({ error: 'Campos obrigatórios ausentes no body' });
+      const payload = {
+        facilidade: body.facilidade,
+        utilidade: body.utilidade,
+        velocidade: body.velocidade,
+        clareza: body.clareza,
+        ajuda: body.ajuda,
+        melhorar: body.melhorar,
+        momentos: body.momentos,
+        mudanca: body.mudanca,
+        beneficio: body.beneficio,
+        experiencia: body.experiencia
+      };
+
+      // Validação rápida
+      const missing = Object.entries(payload).filter(
+        ([, v]) => v === undefined || v === null || v === ""
+      );
+
+      if (missing.length > 0) {
+        return res.status(400).json({
+          error: "Campos obrigatórios faltando",
+          missing: missing.map(([k]) => k)
+        });
       }
 
       const { data, error } = await supabase
-        .from('ratings')
-        .insert([
-          {
-            facilidade,
-            utilidade,
-            velocidade,
-            clareza,
-            ajuda,
-            melhorar,
-            momentos,
-            mudanca,
-            beneficio,
-            experiencia
-          }
-        ])
+        .from("ratings")
+        .insert([payload])
         .select()
         .single();
 
       if (error) {
-        console.error('Supabase POST error:', error);
-        return res.status(500).json({ error: 'Erro ao salvar avaliação' });
+        console.error("❌ Supabase POST error:", error);
+        return res.status(500).json({ error: "Supabase POST error", details: error });
       }
 
       return res.status(201).json(data);
-    } catch (e) {
-      console.error('POST handler error:', e);
-      return res.status(500).json({ error: 'Erro interno no servidor' });
     }
-  }
 
-  // Método não suportado
-  return res.status(405).json({ error: 'Method not allowed' });
+    // Método não suportado
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (err) {
+    console.error("❌ Unexpected error:", err);
+    return res.status(500).json({ error: "Unexpected error", details: String(err) });
+  }
 };
